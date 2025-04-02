@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import tensorflow as tf
-from tensorflow.image import resize
+from tensorflow.image import resize # type: ignore
 import librosa
 import numpy as np
 import uvicorn
@@ -32,7 +32,7 @@ class PredictResponse(BaseModel):
     timestamp: str
 
 
-class HistoryResponse(BaseModel):
+class HistoryItem(BaseModel):
     prediction_id: str
     filename: str
     final_prediction: str
@@ -50,7 +50,7 @@ GENRES = ["blues", "classical", "country", "disco",
 # Create Dictionaries
 if not os.path.exists(HISTORY_FILE):
     with open(HISTORY_FILE, "w") as f:
-        json.dump({}, f)
+        json.dump([], f)
 
 if not os.path.exists(TEMP_UPLOAD_DIR):
     os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
@@ -114,10 +114,10 @@ def predict_genres(audio_chunks):
         genre_count[genre] = 0
 
     unique_preds, counts = np.unique(pred_categories, return_counts=True)
-    for genre_idx, counts in zip(unique_preds, counts):
-        genre_count[GENRES[genre_idx]] = (counts / len(pred_categories)) * 100
+    for genre_idx, count in zip(unique_preds, counts):
+        genre_count[GENRES[genre_idx]] = (count / len(pred_categories)) * 100
 
-    # Get mahjority prediction
+    # Get majority prediction
     majority_idx = unique_preds[counts == np.max(counts)][0]
     confidence = np.max(counts) / len(pred_categories)
 
@@ -138,6 +138,8 @@ async def predict_audio(file: UploadFile = File(...)):
     try:
         with open(temp_path, "wb") as f:
             f.write(file.file.read())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
 
     # Process and Predict
     audio_chunks = preprocess_audio(temp_path)
@@ -185,7 +187,8 @@ async def health_check():
         "supported_formats": [".mp3", ".wav"]
     }
 
-def save_to_history(prediction: PredictionResponse, filename: str):
+
+def save_to_history(prediction: PredictResponse, filename: str):
     history_item = HistoryItem(
         prediction_id=prediction.prediction_id,
         filename=filename,
@@ -206,3 +209,10 @@ def save_to_history(prediction: PredictionResponse, filename: str):
     
     with open(HISTORY_FILE, 'w') as f:
         json.dump(history, f)
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    
+
+# Run project CLI uvicorn app:main --reload
