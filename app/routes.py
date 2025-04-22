@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.post("/predict", response_model=PredictResponse)
 async def predict_audio(file: UploadFile = File(...)):
-    if not file.filename.endswith(('wav', 'mp3')):
+    if not file.filename.lower().endswith(('wav', 'mp3')):
         raise HTTPException(
             status_code=400,
             detail="Invalid file format. Only WAV and MP3 files are supported"

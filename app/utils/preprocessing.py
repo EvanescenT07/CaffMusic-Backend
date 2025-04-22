@@ -1,6 +1,6 @@
 import librosa
 import numpy as np
-from tensorflow.image import resize
+from tensorflow.image import resize # type: ignore
 from fastapi import HTTPException
 
 

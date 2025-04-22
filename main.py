@@ -202,7 +202,7 @@ def save_to_history(prediction: PredictResponse, filename: str):
         with open(HISTORY_FILE, 'r') as f:
             history = json.load(f)
     
-    history.append(history_item.dict())
+    history.append(history_item.model_dump())
     
     # Keep only last 100 predictions
     history = history[-100:]
@@ -211,8 +211,7 @@ def save_to_history(prediction: PredictResponse, filename: str):
         json.dump(history, f)
 
 
+# Run project CLI uvicorn main:app --reload
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
     
-
-# Run project CLI uvicorn app:main --reload
